@@ -82,5 +82,3 @@ http://localhost:3000/login # Login in with both user using seperate browser for
 
 
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +27,7 @@ SECRET_KEY = "django-insecure-8dv9-honm0qaw3$4fko)d_9-s$6&q*p@h92glc=j_$d0&uuigq
 DEBUG = True
 
 ALLOWED_HOSTS = []
+AUTH_USER_MODEL = "users.User"
 
 
 # Application definition
@@ -42,6 +44,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "channels",
     "chat",
+    "users",
     "rest_framework.authtoken",
 ]
 
@@ -99,12 +102,25 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config("database_name"),
+        "USER": config("database_user"),
+        "PASSWORD": config("database_password"),
+        "HOST": config("database_host"),
+        "PORT": config("database_port"),
     }
 }
+
+
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
@@ -132,7 +148,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kathmandu"
 
 USE_I18N = True
 
