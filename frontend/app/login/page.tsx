@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { FormEvent, useState } from "react";
 
 const LoginPage = () => {
-    const [credentials, setCredentials] = useState({ username: "", password: "" });
+    const [credentials, setCredentials] = useState({ email: "", password: "" });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +16,7 @@ const LoginPage = () => {
 
         try {
             // 👇 Change URL according to your backend endpoint
-            const response = await fetch("http://127.0.0.1:8000/auth/login/", {
+            const response = await fetch("http://127.0.0.1:8000/api/auth/login/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -25,7 +25,7 @@ const LoginPage = () => {
             });
 
             if (!response.ok) {
-                throw new Error("Invalid username or password");
+                throw new Error("Invalid email or password");
             }
 
             const data = await response.json();
@@ -51,9 +51,9 @@ const LoginPage = () => {
                 <h2 className="text-xl font-semibold mb-2">Login</h2>
 
                 <TextField
-                    label="Username"
+                    label="email"
                     type="text"
-                    onChange={(e) => setCredentials((prev) => ({ ...prev, username: e.target.value }))}
+                    onChange={(e) => setCredentials((prev) => ({ ...prev, email: e.target.value }))}
                 />
 
                 <TextField

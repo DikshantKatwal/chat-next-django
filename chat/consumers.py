@@ -10,7 +10,7 @@ User = get_user_model()
 
 
 def generate_room_name(user1_id, user2_id):
-    ids = sorted([int(user1_id), int(user2_id)])
+    ids = sorted([str(user1_id), str(user2_id)])
     return f"dm_{ids[0]}_{ids[1]}"
 
 
@@ -18,19 +18,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         query_string = self.scope["query_string"].decode()
         params = dict(q.split("=") for q in query_string.split("&") if "=" in q)
-        recipient_id = params.get("recipient_id")
-
-        if not self.scope["user"].is_authenticated or not recipient_id:
+        username = params.get("username")
+        print("Connecting user:", self.scope["user"], "to", username)
+        if not self.scope["user"].is_authenticated or not username:
             await self.close()
             return
-
+        print("Connecting to chat...")
         self.user = self.scope["user"]
-        self.recipient = await self.get_user(recipient_id)
+        self.recipient = await self.get_user(username)
+        print("self.recipient", self.recipient)
+
         if not self.recipient:
             await self.close()
             return
 
         self.room_name = generate_room_name(self.user.id, self.recipient.id)
+        print("self.room_name", self.room_name)
         self.room_group_name = f"chat_{self.room_name}"
 
         # Create or fetch the room
@@ -58,7 +61,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "type": "chat_message",
                 "message": message,
                 "username": self.user.username,
-                "user_id": self.user.id,
+                "user_id": str(self.user.id),
                 "timestamp": datetime.now().isoformat(),
             },
         )
@@ -68,8 +71,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # === DB helpers ===
     @database_sync_to_async
-    def get_user(self, user_id):
-        return User.objects.filter(id=user_id).first()
+    def get_user(self, username):
+        return User.objects.filter(username=username).first()
 
     @database_sync_to_async
     def add_users_to_room(self, user1, user2):
@@ -90,7 +93,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 "message": m.text,
                 "username": m.sender.username,
-                "user_id": m.sender.id,
+                "user_id": str(m.sender.id),
                 "timestamp": m.timestamp.isoformat(),
             }
             for m in messages
