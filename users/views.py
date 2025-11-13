@@ -34,6 +34,12 @@ class LoginView(APIView):
             )
 
 
+def make_title_case(name):
+    if isinstance(name, str):
+        return name.title()
+    return name
+
+
 class ProfileView(ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
@@ -47,10 +53,8 @@ class ProfileView(ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         data = request.data.copy()
-        if "first_name" in data and isinstance(data["first_name"], str):
-            data["first_name"] = data["first_name"].title()
-        if "last_name" in data and isinstance(data["last_name"], str):
-            data["last_name"] = data["last_name"].title()
+        data["first_name"] = make_title_case(data.get("first_name", ""))
+        data["last_name"] = make_title_case(data.get("last_name", ""))
         request._full_data = data  # ensures serializer sees updated data
 
         return super().partial_update(request, *args, **kwargs)
@@ -63,10 +67,8 @@ class RegisterUser(ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
-        if "first_name" in data and isinstance(data["first_name"], str):
-            data["first_name"] = data["first_name"].title()
-        if "last_name" in data and isinstance(data["last_name"], str):
-            data["last_name"] = data["last_name"].title()
+        data["first_name"] = make_title_case(data.get("first_name", ""))
+        data["last_name"] = make_title_case(data.get("last_name", ""))
         request._full_data = data  # ensures serializer sees updated data
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -82,3 +84,17 @@ class RegisterUser(ModelViewSet):
                 },
             }
         )
+
+
+# from rest_framework.decorators import api_view
+# from django.core.cache import cache
+# @api_view(["GET"])
+# def caching_tester(request):
+#     cache_key = f"last_value"
+#     cached_data = cache.get(cache_key)
+#     if cached_data:
+#         return Response(cached_data, status=status.HTTP_200_OK)
+#     for i in range(100000000):
+#         last_value = i
+#     cache.set(cache_key, {"last_value": last_value}, timeout=3600)
+#     return Response({"last_value": last_value})

@@ -56,6 +56,14 @@ REST_FRAMEWORK = {
     ],
     "DATE_INPUT_FORMATS": ["%Y-%m-%d"],
     "DATETIME_FORMAT": "%Y-%m-%d %H:%M:%S %Z",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "user": "500/hour",
+        "anon": "30/hour",
+    },
 }
 
 
@@ -89,6 +97,8 @@ TEMPLATES = [
 
 # WSGI_APPLICATION = "system.wsgi.application"
 ASGI_APPLICATION = "system.asgi.application"
+
+# Channels configuration for Redis
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -98,16 +108,20 @@ CHANNEL_LAYERS = {
     },
 }
 
+# Caching using Redis
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+}
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
 
 DATABASES = {
     "default": {
