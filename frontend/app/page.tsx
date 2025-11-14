@@ -66,11 +66,11 @@ export default function Chat() {
 	return (
 		<div className="flex justify-center items-center p-2">
 			<div className="border grid grid-cols-[12rem_20rem] h-96 rounded-2xl shadow-2xl py-2 px-1">
-				<div className="border-r overflow-hidden flex flex-col p-1 min-h-20">
+				<div className="border-r overflow-hidden flex flex-col p-1 ">
 					<span className="font-semibold font-oswald border-b ">
 						Messages
 					</span>
-					<div className="py-2 h-[80vh] overflow-y-scroll flex flex-col gap-2">
+					<div className="py-2 overflow-y-auto flex flex-col gap-2">
 						{
 							connections?.map((connection: any, i: number) => (
 								<div key={i} onClick={
@@ -83,16 +83,22 @@ export default function Chat() {
 								</div>
 							))
 						}
+						{/* <div className="flex items-center gap-2 p-2 border rounded-md hover:bg-accent">
+							<User className="size-7 bg-background rounded-full p-[5px]" />
+							<span className="font-nunito text-sm text-nowrap ">
+								Sus
+							</span>
+						</div> */}
 					</div>
 				</div>
 
-				<div className="flex flex-col h-[80vh]  bg-background">
-					<div className="flex items-center justify-between  border-b min-h-[5rem]">
-						<h2 className="font-normal font-nunito underline">{recipientId || "?"} </h2>
-						<h2 className="font-semibold">{userData.username}<ThemeToggle /></h2>
+				<div className=" overflow-hidden flex flex-col p-1">
+					<div className="flex items-center justify-between border-b ">
+						<h2 className="font-normal font-nunito underline">{recipientId || ""} </h2>
+						<h2 className="font-semibold">{userData.username} <ThemeToggle /></h2>
 					</div>
 
-					<div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+					<div className=" overflow-y-auto px-3 py-2 space-y-2">
 						{messages.map((msg: any, i) => {
 							const isUser = msg.username === userData.username;
 							return (
