@@ -158,4 +158,19 @@
 	body {
 		@apply bg-background text-foreground;
 	}
+
+
+	.scrollbar-hide::-webkit-scrollbar {
+		display: none;
+	}
+
+	.light-gradient {
+		@apply bg-[#FEFAE0];
+	}
+
+	.scrollbar-hide {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+
 }
