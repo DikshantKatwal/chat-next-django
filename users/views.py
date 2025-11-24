@@ -1,3 +1,4 @@
+import time
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
@@ -47,6 +48,34 @@ class ProfileView(ModelViewSet):
 
     def get_object(self):
         return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)
+
+    def partial_update(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data["first_name"] = make_title_case(data.get("first_name", ""))
+        data["last_name"] = make_title_case(data.get("last_name", ""))
+        request._full_data = data  # ensures serializer sees updated data
+
+        return super().partial_update(request, *args, **kwargs)
+
+
+class ProfileView(ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    def list(self, request, *args, **kwargs):
+        username = request.query_params.get("username")
+        print(username)
+        time.sleep(1)
+        if username:
+            self.queryset = self.queryset.filter(username__icontains=username).exclude(
+                id=request.user.id
+            )
+        print(self.queryset)
+        return super().list(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
         return Response(UserSerializer(request.user).data, status=status.HTTP_200_OK)

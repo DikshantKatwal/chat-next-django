@@ -4,7 +4,6 @@ import { useTheme } from "next-themes";
 import { Monitor } from 'lucide-react';
 export default function ThemeToggle() {
     const { theme, setTheme } = useTheme();
-    console.log(theme)
     return (
         <button
             type="button"

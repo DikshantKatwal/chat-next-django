@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Oswald, Nunito } from "next/font/google";
 import "./globals.css";
 import ThemeProvider from "@/theme/theme-provider";
+import Providers from "@/context/queryProvider";
 
 const OswaldSans = Oswald({
   variable: "--font-oswald",
@@ -36,7 +37,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <Providers>
+            {children}
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

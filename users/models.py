@@ -49,6 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = CustomAccountManager()
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username", "first_name", "last_name"]
 
     @property
     def full_name(self):

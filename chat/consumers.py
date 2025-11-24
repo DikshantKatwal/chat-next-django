@@ -1,6 +1,5 @@
 # chat/consumers.py
 import json
-from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
@@ -16,63 +15,115 @@ def generate_room_name(user1_id, user2_id):
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        query_string = self.scope["query_string"].decode()
-        params = dict(q.split("=") for q in query_string.split("&") if "=" in q)
-        username = params.get("username")
-        print("Connecting user:", self.scope["user"], "to", username)
-        if not self.scope["user"].is_authenticated or not username:
+        """Single WebSocket for the whole user session"""
+        if not self.scope["user"].is_authenticated:
             await self.close()
             return
-        print("Connecting to chat...")
         self.user = self.scope["user"]
-        self.recipient = await self.get_user(username)
-        print("self.recipient", self.recipient)
 
-        if not self.recipient:
-            await self.close()
-            return
-
-        self.room_name = generate_room_name(self.user.id, self.recipient.id)
-        print("self.room_name", self.room_name)
-        self.room_group_name = f"chat_{self.room_name}"
-
-        # Create or fetch the room
-        self.room = await self.add_users_to_room(self.user, self.recipient)
-        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        self.user_group = f"user_{self.user.id}"
+        await self.channel_layer.group_add(self.user_group, self.channel_name)
+        rooms = await self.get_user_rooms(self.user)
+        for room in rooms:
+            await self.channel_layer.group_add(f"chat_{room.name}", self.channel_name)
         await self.accept()
 
-        # 1️⃣ Send previous messages to the client
-        history = await self.get_chat_history(self.room)
-        await self.send(text_data=json.dumps({"type": "history", "messages": history}))
-
     async def disconnect(self, code):
-        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+        await self.channel_layer.group_discard(self.user_group, self.channel_name)
 
     async def receive(self, text_data):
+        """Client always sends: { "action": "...", ... }"""
         data = json.loads(text_data)
-        message = data.get("message", "")
-        if not message:
+        action = data.get("action")
+
+        # 🟦 Request chat history
+        if action == "load_chat":
+            username = data["username"]
+            recipient = await self.get_user(username)
+            print("Recipient:", recipient)
+            print("self.user:", self.user)
+            room = await self.add_users_to_room(self.user, recipient)
+            history = await self.get_chat_history(room)
+
+            await self.send(
+                json.dumps(
+                    {"type": "history", "username": username, "messages": history}
+                )
+            )
             return
 
-        await self.save_message(self.user, message)
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
+        if action == "typing":
+            recipient = await self.get_user(data["username"])
+            await self.channel_layer.group_send(
+                f"user_{recipient.id}",
+                {
+                    "type": "typing",
+                    "from_user": self.user.username,
+                    "room": generate_room_name(self.user.id, recipient.id),
+                },
+            )
+            return
+
+        if action == "stop_typing":
+            recipient = await self.get_user(data["username"])
+            await self.channel_layer.group_send(
+                f"user_{recipient.id}",
+                {
+                    "type": "stop_typing",
+                    "from_user": self.user.username,
+                    "room": generate_room_name(self.user.id, recipient.id),
+                },
+            )
+            return
+
+        if action == "send_message":
+            text = data["message"]
+            username = data["username"]
+
+            recipient = await self.get_user(username)
+            room = await self.add_users_to_room(self.user, recipient)
+
+            await self.save_message(room, self.user, text)
+
+            event = {
                 "type": "chat_message",
-                "message": message,
+                "room": room.name,
                 "username": self.user.username,
-                "user_id": str(self.user.id),
-                "timestamp": datetime.now().isoformat(),
-            },
-        )
+                "message": text,
+            }
 
+            # Broadcast to the room
+            await self.channel_layer.group_send(f"chat_{room.name}", event)
+
+            # Also notify the recipient
+            await self.channel_layer.group_send(
+                f"user_{recipient.id}",
+                {
+                    "type": "notify",
+                    "from_user": self.user.username,
+                    "message": text,
+                    "room": room.name,
+                },
+            )
+            return
+
+    # === Event Handlers ===
     async def chat_message(self, event):
-        await self.send(text_data=json.dumps(event))
+        await self.send(json.dumps(event))
 
-    # === DB helpers ===
+    async def notify(self, event):
+        await self.send(json.dumps(event))
+
+    async def typing(self, event):
+        await self.send(json.dumps(event))
+
+    async def stop_typing(self, event):
+        await self.send(json.dumps(event))
+
+    # === DB Helpers ===
     @database_sync_to_async
     def get_user(self, username):
-        return User.objects.filter(username=username).first()
+        return User.objects.filter(username__iexact=username).first()
 
     @database_sync_to_async
     def add_users_to_room(self, user1, user2):
@@ -82,19 +133,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return room
 
     @database_sync_to_async
-    def save_message(self, sender, text):
-        Message.objects.create(room=self.room, sender=sender, text=text)
+    def save_message(self, room, sender, text):
+        Message.objects.create(room=room, sender=sender, text=text)
 
     @database_sync_to_async
     def get_chat_history(self, room):
-        """Fetch last 50 messages and serialize them"""
-        messages = Message.objects.filter(room=room).order_by("timestamp")[:50]
+        messages = Message.objects.filter(room=room).order_by("timestamp")
         return [
             {
                 "message": m.text,
                 "username": m.sender.username,
-                "user_id": str(m.sender.id),
                 "timestamp": m.timestamp.isoformat(),
             }
             for m in messages
         ]
+
+    @database_sync_to_async
+    def get_user_rooms(self, user):
+        return list(ChatRoom.objects.filter(participants=user))
