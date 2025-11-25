@@ -32,11 +32,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(self.user_group, self.channel_name)
 
     async def receive(self, text_data):
-        """Client always sends: { "action": "...", ... }"""
         data = json.loads(text_data)
         action = data.get("action")
 
-        # 🟦 Request chat history
         if action == "load_chat":
             username = data["username"]
             recipient = await self.get_user(username)
